@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/manifoldfinance/attnetlet/crawler"
+	"github.com/manifoldfinance/attnetlet"
 )
 
 var (

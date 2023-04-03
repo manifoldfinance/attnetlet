@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FILE=$1
+COMMAND=$2
+
+if [ "$FILE" == "" ]
+then
+  echo "x No file provided"
+  exit 1
+fi
+if [ "$COMMAND" != "check" ] && [ "$COMMAND" != "create" ]
+then
+  echo "▶ No create or check command specified, assuming check"
+  COMMAND=check
+fi
+
+if [ ! -f "${FILE}" ]
+then
+  echo "x No file found to checksum"
+  exit 1
+fi
+#SIZE=`du -Bg $FILE|sed 's/\(\d*\)G.*/\1/'`
+SIZE=$(du -Bm "$FILE"|sed 's/\(\d*\)M.*/\1/')
+SIZE=$(echo "$SIZE / 1024"|bc)
+
+if [ "$COMMAND" == "create" ]
+then : > "${FILE}".checksum
+  for((i=1;i<=$SIZE;++i)) do
+    dd bs=1M skip=$((1024*$i)) count=1 if="$FILE" 2>/dev/null | sha512sum >> "${FILE}".checksum
+  done
+  echo "CHECKSUM CREATED"
+  exit 0
+elif [ -f "${FILE}".checksum ] && [ "$COMMAND" == "check" ]
+then
+  for((i=1;i<=$SIZE;++i)) do
+    CHECKSUM=$(dd bs=1M skip=$((1024*$i)) count=1 if="$FILE" 2>/dev/null | sha512sum |awk '{print $1}')
+    LINE=$(grep -n "$CHECKSUM" "${FILE}".checksum|awk -F\: '{print $1}'|grep $i)
+    if [ "$LINE" != "$i" ]
+    then
+      echo "x CHECKSUM FAILED"
+      exit 1
+    fi
+  done
+  echo "CHECKSUM SUCCEEDED"
+  exit 0
+elif [ ! -f "${FILE}".checksum ] && [ "$COMMAND" == "check" ]
+then
+  echo "x No checksum file found"
+  exit 1
+fi
